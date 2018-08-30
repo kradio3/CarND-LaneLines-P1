@@ -13,7 +13,10 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/grayscale.jpg "Grayscale"
+[canny]: ./writeup_images/canny.png "Canny over saturation"
+[roi]: ./writeup_images/roi.png "Region of interest"
+[hough_lines]: ./writeup_images/hough_lines.png "Hough lines"
+[ruler]: ./writeup_images/rulers.png "Extrapolated rulers"
 
 ---
 
@@ -23,37 +26,32 @@ The goals / steps of this project are the following:
 
 My pipeline consisted of these steps:
 
-1. Convert images to HSV color model.
-2. Apply 'Canny' algorithm for each HSV dimension with different thresholds for hue, saturation and value. 
-And combine found edges via ```cv.bitwise_and()``` function. 
+1. Convert images to HLS color model.
+2. Apply 'Canny' algorithm for saturation channel.
 Goal is to detect lines on images with different brightness or images with shadows.
+![alt text][canny]
 3. Region of interest. Select edges only in defined trapezoidal region.
+![alt text][roi]
 4. Hough lines. Detect lines in ROI and suppress noised lines by threshold.
+![alt text][hough_lines]
 5. Extrapolate hough lines and draw rulers. 
+![alt text][ruler]
 In order to draw a single line on the left and right lanes, I modified the draw_lines() in following way:
-  - Calculate tangents for each line
-  - Divide lines by tangents to left and right line
-  - Draw each line on binary image
+  - Calculate tangents for each hough line
+  - Separate lines by tangents to left and right candidates
+  - Draw candidates on binary image
   - Find coords of white points on binary image by ```np.nonzero()```
   - Apply polynomial regression for these coordinates by ```np.polyfit(x, y, degree)```. 
 Now i have parameters ```m``` and ```b``` for line equation ```y=mx+b```
   - Draw each line by found equation
 
-If you'd like to include images to show how the pipeline works, here is how to include an image: 
-
-![alt text][image1]
-
-
 ### 2. Identify potential shortcomings with your current pipeline
-
-
-One potential shortcoming would be what would happen when ... 
-
-Another shortcoming could be ...
-
+- Cars with yellow or white colors appears in ROI
+- Road turns in sharp angle
+- Snow on the road
 
 ### 3. Suggest possible improvements to your pipeline
 
-A possible improvement would be to ...
+- Canny algorithm detects edges by 2 Sobel's operators: one for vertical edges, second for horizontal edges. Possible improvement would be to extend it to detect sloping edges. Similar techniques widely used in convolution layers of neural nets.
 
-Another potential improvement could be to ...
+- Canny algorithm takes 2-D picture as input. Possible improvements would be to analyze RGB (or HLS) channels simultaneously by 3-D version of Sobel's operator
