@@ -1,56 +1,68 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+## Writeup
 
-Overview
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+**Finding Lane Lines on the Road**
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
-
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+[//]: # (Image References)
 
-1. Describe the pipeline
+[canny]: ./writeup_images/canny.png "Canny over saturation"
+[roi]: ./writeup_images/roi.png "Region of interest"
+[hough_lines]: ./writeup_images/hough_lines.png "Hough lines"
+[ruler]: ./writeup_images/rulers.png "Extrapolated rulers"
+[homography]: ./writeup_images/homography.png "Homography"
+[running_means]: ./writeup_images/running_means.png "Running means"
 
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### Reflection
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
+### 1. Pipeline description
 
-**Step 2:** Open the code in a Jupyter Notebook
+My pipeline consisted of these steps:
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
+#### 1. Convert images to HLS color model.
+#### 2. Apply 'Canny' algorithm for saturation channel.
+Goal is to detect lines on images with different brightness or images with shadows.
+![alt text][canny]
+#### 3. Region of interest. Select edges only in defined trapezoidal region.
+![alt text][roi]
+#### 4. Hough lines. Detect lines in ROI and suppress noised lines by threshold.
+![alt text][hough_lines]
+#### 5. Extrapolate hough lines and draw rulers. 
+![alt text][ruler]
+In order to draw a single line on the left and right lanes, I modified the draw_lines() in following way:
+  - Calculate tangents for each hough line
+  - Separate lines by tangents to left and right candidates
+  - Draw candidates on binary image
+  - Find coords of white points on binary image by ```np.nonzero()```
+  - Apply polynomial regression for these coordinates by ```np.polyfit(x, y, degree)```. 
+Now i have parameters ```m``` and ```b``` for line equation ```y=mx+b```
+  - Draw each line by found equation
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+### 2. Potential shortcomings
+- Cars with yellow or white colors appears in ROI
+- Road turns in sharp angle
+- Snow on the road
+- Signs drawn on the road
 
-`> jupyter notebook`
+### 3. Possible improvements of pipeline
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+- Stabilize slope and bias of found rulers by running means. You can see that running mean even with 5 last frames cuts off noisy peaks.
+![alt text][running_means]
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+- Canny algorithm detects edges by 2 Sobel's operators: one for vertical edges, second for horizontal edges. Possible improvement would be to extend it to detect sloping edges. Similar techniques widely used in convolution layers of neural nets.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+- Canny algorithm takes 2-D picture as input. Possible improvements would be to analyze RGB (or HLS) channels simultaneously by 3-D version of Sobel's operator
 
+- We know shape of lane line: rectangle. Don't find edges - find rectangles. Possible solution is to draw yellow and white rectangles, apply homography transformation for these rectangles: with different angles, different scales. And find positions of these transformed rectangles on the picture by cross correlation algorithm.
+
+- The opposite way is to rectify whole image from camera by homography transformation. Find short lane lines by simple algorithm, we know they are parallel (in most of cases :) ). Now we have at least 4 points to rectify plane along these lane lines. Then find rectangles by cross corellation in rectified plane to have more precise location of lane lines.
+![alt text][homography]
